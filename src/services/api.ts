@@ -2,10 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { Platform } from 'react-native';
 
-const BASE_URL =
-  Platform.OS === 'android'
-    ? 'http://10.11.243.115:8080/api'   // ✅ ĐÚNG CHO EXPO GO
-    : 'http://localhost:8080/api';
+const BASE_URL = 'http://10.11.243.115:8080/api';
 
 console.log('🔗 API BASE_URL:', BASE_URL);
 console.log('📱 Platform:', Platform.OS);
