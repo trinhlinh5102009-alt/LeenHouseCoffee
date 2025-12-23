@@ -1,26 +1,62 @@
-import React, { useState } from "react";
-import {View,Text,TextInput,Image,TouchableOpacity,ActivityIndicator,ScrollView,StyleSheet,} from "react-native";
-import { Eye, EyeOff, Mail, Lock, Coffee } from "lucide-react-native";
+import { useAuth } from '@/src/contexts/AuthContext';
 import { router } from 'expo-router';
+import { Coffee, Eye, EyeOff, Lock, Mail } from "lucide-react-native";
+import React, { useState } from "react";
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 interface LoginProps {
   onSwitchToRegister?: () => void;
 }
 
 export default function Login({ onSwitchToRegister }: LoginProps) {
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  const handleSubmit = async () => {
-    setLoading(true);
-    await new Promise((res) => setTimeout(res, 1500));
-    console.log("Login:", email, password);
-    setLoading(false);
-  };
+// app/(auth)/login.tsx - CHỈ THAY ĐỔI PHẦN handleSubmit
+// ... (giữ nguyên các import và state)
 
+const handleSubmit = async () => {
+  // Validation
+  if (!email || !password) {
+    Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin');
+    return;
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    Alert.alert('Lỗi', 'Email không hợp lệ');
+    return;
+  }
+
+  setLoading(true);
+  try {
+    // Gọi API login từ AuthContext
+    await login(email, password);
+    
+    // Thành công → Navigate to home
+    Alert.alert('Thành công', 'Đăng nhập thành công! 🎉', [
+      {
+        text: 'OK',
+        onPress: () => router.replace('/(tabs)')
+      }
+    ]);
+  } catch (error: any) {
+    // Show error từ backend
+    Alert.alert(
+      'Đăng nhập thất bại', 
+      error.message || 'Email hoặc mật khẩu không đúng. Vui lòng thử lại.'
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
+// ... (giữ nguyên phần UI)
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.card}>

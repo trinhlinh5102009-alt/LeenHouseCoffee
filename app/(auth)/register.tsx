@@ -1,13 +1,15 @@
-import React, { useState } from "react";
-import {View,Text,TextInput,TouchableOpacity,Image,ScrollView,Alert,StyleSheet,} from "react-native";
-import {Eye,EyeOff,Mail,Lock,User,Phone,Check,Coffee,} from "lucide-react-native";
+import { useAuth } from '@/src/contexts/AuthContext';
 import { router } from 'expo-router';
+import { Check, Coffee, Eye, EyeOff, Lock, Mail, Phone, User, } from "lucide-react-native";
+import React, { useState } from "react";
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 interface RegistrationProps {
   onSwitchToLogin?: () => void;
 }
 
 export default function RegistrationScreen({ onSwitchToLogin }: RegistrationProps) {
+  const { register } = useAuth();
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -25,32 +27,74 @@ export default function RegistrationScreen({ onSwitchToLogin }: RegistrationProp
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = async () => {
-    if (formData.password !== formData.confirmPassword) {
-      Alert.alert("Error", "Passwords do not match!");
-      return;
-    }
+// app/(auth)/register.tsx - CHỈ THAY ĐỔI PHẦN handleSubmit
+// ... (giữ nguyên các import và state)
 
-    if (!acceptTerms) {
-      Alert.alert("Error", "You must accept the terms");
-      return;
-    }
+const handleSubmit = async () => {
+  // Validation
+  if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword) {
+    Alert.alert("Lỗi", "Vui lòng nhập đầy đủ thông tin!");
+    return;
+  }
 
-    setLoading(true);
-    await new Promise((res) => setTimeout(res, 1200));
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(formData.email)) {
+    Alert.alert("Lỗi", "Email không hợp lệ!");
+    return;
+  }
 
-    console.log("Registration:", formData);
-    Alert.alert("Success", "Account created successfully!");
+  if (formData.password !== formData.confirmPassword) {
+    Alert.alert("Lỗi", "Mật khẩu xác nhận không khớp!");
+    return;
+  }
+
+  if (formData.password.length < 6) {
+    Alert.alert("Lỗi", "Mật khẩu phải có ít nhất 6 ký tự!");
+    return;
+  }
+
+  if (!acceptTerms) {
+    Alert.alert("Lỗi", "Bạn phải đồng ý với điều khoản sử dụng!");
+    return;
+  }
+
+  setLoading(true);
+  try {
+    // Gọi API register từ AuthContext
+    await register(
+      formData.fullName, 
+      formData.email, 
+      formData.password,
+      formData.phone
+    );
+    
+    // Thành công → Navigate to home
+    Alert.alert("Thành công", "Đăng ký tài khoản thành công! 🎉", [
+      {
+        text: 'OK',
+        onPress: () => router.replace('/(tabs)')
+      }
+    ]);
+  } catch (error: any) {
+    // Show error từ backend
+    Alert.alert(
+      "Đăng ký thất bại", 
+      error.message || "Email có thể đã được sử dụng. Vui lòng thử email khác."
+    );
+  } finally {
     setLoading(false);
-  };
+  }
+};
 
+// ... (giữ nguyên phần UI)
   const passwordStrength = () => {
     const p = formData.password;
 
     if (!p) return null;
-    if (p.length < 6) return { label: "Weak", color: "#dc2626", width: 0.33 };
-    if (p.length < 10) return { label: "Medium", color: "#f59e0b", width: 0.66 };
-    return { label: "Strong", color: "#059669", width: 1 };
+    if (p.length < 6) return { label: "Yếu", color: "#dc2626", width: 0.33 };
+    if (p.length < 10) return { label: "Trung bình", color: "#f59e0b", width: 0.66 };
+    return { label: "Mạnh", color: "#059669", width: 1 };
   };
 
   const strength = passwordStrength();
@@ -90,7 +134,7 @@ export default function RegistrationScreen({ onSwitchToLogin }: RegistrationProp
 
         {/* FULL NAME */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Full Name</Text>
+          <Text style={styles.label}>Họ và tên</Text>
           <View style={styles.inputWrapper}>
             <View style={styles.iconLeft}>
               <User size={20} color="#be185d" />
@@ -98,7 +142,7 @@ export default function RegistrationScreen({ onSwitchToLogin }: RegistrationProp
             <TextInput
               value={formData.fullName}
               onChangeText={(v) => handleChange("fullName", v)}
-              placeholder="Your full name"
+              placeholder="Nhập họ và tên"
               placeholderTextColor="#9ca3af"
               style={styles.input}
             />
@@ -126,7 +170,7 @@ export default function RegistrationScreen({ onSwitchToLogin }: RegistrationProp
 
         {/* PHONE */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Phone Number</Text>
+          <Text style={styles.label}>Số điện thoại</Text>
           <View style={styles.inputWrapper}>
             <View style={styles.iconLeft}>
               <Phone size={20} color="#be185d" />
@@ -144,7 +188,7 @@ export default function RegistrationScreen({ onSwitchToLogin }: RegistrationProp
 
         {/* PASSWORD */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Password</Text>
+          <Text style={styles.label}>Mật khẩu</Text>
           <View style={styles.inputWrapper}>
             <View style={styles.iconLeft}>
               <Lock size={20} color="#be185d" />
@@ -153,7 +197,7 @@ export default function RegistrationScreen({ onSwitchToLogin }: RegistrationProp
               secureTextEntry={!showPassword}
               value={formData.password}
               onChangeText={(v) => handleChange("password", v)}
-              placeholder="Create password"
+              placeholder="Tạo mật khẩu"
               placeholderTextColor="#9ca3af"
               autoCapitalize="none"
               style={[styles.input, styles.inputWithRightIcon]}
@@ -187,7 +231,7 @@ export default function RegistrationScreen({ onSwitchToLogin }: RegistrationProp
                   { color: strength.color },
                 ]}
               >
-                {strength.label} password
+                Mật khẩu {strength.label}
               </Text>
             </View>
           )}
@@ -195,7 +239,7 @@ export default function RegistrationScreen({ onSwitchToLogin }: RegistrationProp
 
         {/* CONFIRM PASSWORD */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Confirm Password</Text>
+          <Text style={styles.label}>Xác nhận mật khẩu</Text>
           <View style={styles.inputWrapper}>
             <View style={styles.iconLeft}>
               <Lock size={20} color="#be185d" />
@@ -204,7 +248,7 @@ export default function RegistrationScreen({ onSwitchToLogin }: RegistrationProp
               secureTextEntry={!showConfirmPassword}
               value={formData.confirmPassword}
               onChangeText={(v) => handleChange("confirmPassword", v)}
-              placeholder="Confirm password"
+              placeholder="Nhập lại mật khẩu"
               placeholderTextColor="#9ca3af"
               autoCapitalize="none"
               style={[styles.input, styles.inputWithRightIcon]}
@@ -223,13 +267,13 @@ export default function RegistrationScreen({ onSwitchToLogin }: RegistrationProp
 
           {/* Password Match Indicators */}
           {passwordsDontMatch && (
-            <Text style={styles.errorText}>Passwords do not match</Text>
+            <Text style={styles.errorText}>Mật khẩu không khớp</Text>
           )}
 
           {passwordsMatch && (
             <View style={styles.matchContainer}>
               <Check size={16} color="#059669" />
-              <Text style={styles.successText}>Passwords match</Text>
+              <Text style={styles.successText}>Mật khẩu khớp</Text>
             </View>
           )}
         </View>
@@ -249,7 +293,7 @@ export default function RegistrationScreen({ onSwitchToLogin }: RegistrationProp
             {acceptTerms && <Check size={16} color="#ffffff" />}
           </View>
           <Text style={styles.termsText}>
-            I agree to the Terms & Conditions
+            Tôi đồng ý với Điều khoản & Điều kiện
           </Text>
         </TouchableOpacity>
 
@@ -260,14 +304,16 @@ export default function RegistrationScreen({ onSwitchToLogin }: RegistrationProp
           style={[styles.submitButton, loading && styles.submitButtonDisabled]}
           activeOpacity={0.8}
         >
-          <Text style={styles.submitButtonText}>
-            {loading ? "Creating Account..." : "Create My Account"}
-          </Text>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.submitButtonText}>Tạo tài khoản</Text>
+          )}
         </TouchableOpacity>
 
         {/* Divider */}
         <View style={styles.dividerContainer}>
-          <Text style={styles.dividerText}>🌸 Or continue with 🌸</Text>
+          <Text style={styles.dividerText}>🌸 Hoặc đăng ký với 🌸</Text>
         </View>
 
         {/* Social Buttons */}
@@ -284,13 +330,13 @@ export default function RegistrationScreen({ onSwitchToLogin }: RegistrationProp
         {/* SWITCH TO LOGIN */}
         <View style={styles.loginLinkContainer}>
           <Text style={styles.loginText}>
-            Already have an account?{" "}
+            Đã có tài khoản?{" "}
           </Text>
           <TouchableOpacity 
             onPress={() => onSwitchToLogin ? onSwitchToLogin() : router.push('/(auth)/login')} 
             activeOpacity={0.7}
           >
-            <Text style={styles.loginLink}>Sign In</Text>
+            <Text style={styles.loginLink}>Đăng nhập</Text>
           </TouchableOpacity>
         </View>
       </View>
